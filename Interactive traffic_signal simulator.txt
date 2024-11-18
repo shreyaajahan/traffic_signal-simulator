@@ -1,0 +1,203 @@
+               import pygame
+import threading
+import time
+
+# Initialize Pygame
+pygame.init()
+
+# Set up display
+width, height = 600, 600
+screen = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Four-Way Traffic Signal Simulator")
+
+# Define colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GRAY = (169, 169, 169)
+RED = (255, 0, 0)
+YELLOW = (255, 255, 0)
+GREEN = (0, 255, 0)
+
+# Set up font for instructions
+font = pygame.font.SysFont("Arial", 24)
+small_font = pygame.font.SysFont("Arial", 20)
+
+# Set up signal states
+north_signal = GREEN
+south_signal = YELLOW
+east_signal = west_signal = RED
+
+# Time intervals for signals
+green_duration = 8  # Green light duration in seconds
+yellow_duration = 2  # Yellow light duration
+
+# Car positions and speeds
+north_car_y = 0
+south_car_y = height - 50
+east_car_x = width - 50
+west_car_x = 0
+car_speed = 5
+
+# Traffic signal switching logic
+def switch_traffic_lights():
+    global north_signal, south_signal, east_signal, west_signal
+
+    while True:
+        # North Green, South Yellow, East-West Red
+        north_signal = GREEN
+        south_signal = YELLOW
+        east_signal = west_signal = RED
+        time.sleep(green_duration)
+
+        # North Yellow, South Green, East-West Red
+        north_signal = YELLOW
+        south_signal = GREEN
+        east_signal = west_signal = RED
+        time.sleep(yellow_duration)
+
+        # East Green, West Yellow, North-South Red
+        east_signal = GREEN
+        west_signal = YELLOW
+        north_signal = south_signal = RED
+        time.sleep(green_duration)
+
+        # East Yellow, West Green, North-South Red
+        east_signal = YELLOW
+        west_signal = GREEN
+        north_signal = south_signal = RED
+        time.sleep(yellow_duration)
+
+
+# Start a thread for the traffic light switching
+thread = threading.Thread(target=switch_traffic_lights)
+thread.daemon = True
+thread.start()
+
+
+# Function to draw a single traffic light
+def draw_signal(x, y, signal_color):
+    # Background rectangle
+    pygame.draw.rect(screen, WHITE, (x, y, 60, 180))
+    # Red light
+    pygame.draw.circle(screen, RED if signal_color == RED else BLACK,
+                       (x + 30, y + 30), 20)
+    # Yellow light
+    pygame.draw.circle(screen, YELLOW if signal_color == YELLOW else BLACK,
+                       (x + 30, y + 90), 20)
+    # Green light
+    pygame.draw.circle(screen, GREEN if signal_color == GREEN else BLACK,
+                       (x + 30, y + 150), 20)
+
+
+# Function to display instructions based on signal color
+def display_instructions(signal_color):
+    if signal_color == RED:
+        return "STOP"
+    elif signal_color == YELLOW:
+        return "Get Ready"
+    elif signal_color == GREEN:
+        return "GO"
+
+
+# Function to draw cars
+def draw_car(x, y, color, direction):
+    if direction == "vertical":
+        pygame.draw.rect(screen, color, (x, y, 40, 70))  # Vertical car
+    elif direction == "horizontal":
+        pygame.draw.rect(screen, color, (x, y, 70, 40))  # Horizontal car
+
+
+# Main game loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Fill background
+    screen.fill(BLACK)
+
+    # Draw wider roads (simple cross intersection with wider gray roads)
+    pygame.draw.rect(screen, GRAY, (200, 0, 200, height))  # Vertical road (wider)
+    pygame.draw.rect(screen, GRAY, (0, 200, width, 200))  # Horizontal road (wider)
+
+    # Draw traffic lights
+    # North (top, moved further up)
+    draw_signal(270, 30, north_signal)
+
+    # South (bottom, moved further down)
+    draw_signal(270, 390, south_signal)
+
+    # East (right, moved further right)
+    draw_signal(470, 270, east_signal)
+
+    # West (left, moved further left)
+    draw_signal(50, 270, west_signal)
+
+    # Display directions and instructions next to the signals
+    # North
+    north_text = font.render("North", True, WHITE)
+    north_instruction = small_font.render(
+        f"{display_instructions(north_signal)}", True, WHITE)
+    screen.blit(north_text, (270, 10))
+    screen.blit(north_instruction, (270, 200))
+
+    # South
+    south_text = font.render("South", True, WHITE)
+    south_instruction = small_font.render(
+        f"{display_instructions(south_signal)}", True, WHITE)
+    screen.blit(south_text, (270, 550))
+    screen.blit(south_instruction, (270, 400))
+
+    # East
+    east_text = font.render("East", True, WHITE)
+    east_instruction = small_font.render(
+        f"{display_instructions(east_signal)}", True, WHITE)
+    screen.blit(east_text, (520, 240))
+    screen.blit(east_instruction, (350, 270))
+
+    # West
+    west_text = font.render("West", True, WHITE)
+    west_instruction = small_font.render(
+        f"{display_instructions(west_signal)}", True, WHITE)
+    screen.blit(west_text, (10, 240))
+    screen.blit(west_instruction, (130, 270))
+
+    # Draw and move cars
+    # Move north car when north signal is green
+    if north_signal == GREEN:
+        north_car_y += car_speed
+    if north_car_y > height:
+        north_car_y = -70  # Reset car position after leaving the screen
+
+    # Move south car when south signal is green
+    if south_signal == GREEN:
+        south_car_y -= car_speed
+    if south_car_y < -70:
+        south_car_y = height  # Reset car position after leaving the screen
+
+    # Move east car when east signal is green
+    if east_signal == GREEN:
+        east_car_x -= car_speed
+    if east_car_x < -70:
+        east_car_x = width  # Reset car position after leaving the screen
+
+    # Move west car when west signal is green
+    if west_signal == GREEN:
+        west_car_x += car_speed
+    if west_car_x > width:
+        west_car_x = -70  # Reset car position after leaving the screen
+
+    # Draw cars
+    draw_car(280, north_car_y, GREEN, "vertical")  # North car
+    draw_car(280, south_car_y, YELLOW, "vertical")  # South car
+    draw_car(east_car_x, 270, RED, "horizontal")  # East car
+    draw_car(west_car_x, 290, WHITE, "horizontal")  # West car
+
+    # Update display
+    pygame.display.flip()
+
+    # Control frame rate
+    pygame.time.Clock().tick(60)
+
+pygame.quit()                                  
